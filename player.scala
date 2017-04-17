@@ -7,6 +7,7 @@ class Player {
   private var points = 25000
   private var ric = false //Keeps track if the player is in riichi
 
+  // ! SHhould perhaps have a guard
   def riichi = {
     points -= 1000
     ric = true

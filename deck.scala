@@ -67,7 +67,6 @@ class Deck {
                        (ListBuffer.fill(4)(curr)).flatten
   }
 
-  // !! Should throw an exception when the deck is empty !!
   def draw: Tile = {
     if (deck.length != 0) {
       val top = deck.head

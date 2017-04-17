@@ -5,11 +5,21 @@ object Scoring {
   // DEFINITION FOR TESTING
   def main(args: Array[String]): Unit = {
     var t1 = new Tile("Dot",2)
-    var t2 = new Tile("Dragon",2)
-    var t3 = new Tile("Wind",1)
+        var t2 = new Tile("Dot",3)
+        var t3 = new Tile("Dot",4)
+        var t4 = new Tile("Dot",5)
+        var t5 = new Tile("Dot",6)
+        var t6 = new Tile("Dot",7)
+        var t7 = new Tile("Dot",8)
+    var dragon = new Tile("Dragon",2)
+    var wind = new Tile("Wind",1)
     var p = new Player
-    p.newRound(1,ListBuffer[Tile](t1,t1,t1,t1,t1,t1,t3,t3,t3,t1,t2,t2,t2,t2))
-    println(calculateScore(p,false,ListBuffer[Tile](t1)))
+    var hand = ListBuffer[Tile](t1,t1,t1,t2,t2,t2,t3,t3,t3,t4,t4,t4,t5,t5)
+    var sevenpairs = ListBuffer[Tile](t1,t1,t2,t2,t3,t3,t4,t4,t5,t5,t6,wind,wind,wind)
+    p.newRound(1,hand)
+    println(isLegitHand(p.getHand))
+    p.riichi
+    println(calculateScore(p,true,ListBuffer[Tile](t3)))
   }
   /* Returns the respective points to be added/subtracted
      in case of a draw */
@@ -60,6 +70,8 @@ object Scoring {
     yaku += riichi
     yaku += tanyao
     yaku += yakuhai
+    yaku += chiitoitsu
+    yaku += toitoi
 
     def riichi : Int = {
       if(player.getRiichi) {
@@ -68,7 +80,7 @@ object Scoring {
       }
       return 0
     }
-    // Tanyao = All simples
+    // All simples
     def tanyao : Int = {
       var tiles = hand.getWholeHand
       tiles = tiles.filter(x => (x.value != 1 && x.value != 9))
@@ -80,8 +92,42 @@ object Scoring {
       return 0
     }
 
+    // All triplets
+    def toitoi : Int = {
+      var triplets = 0
+      var pairs    = 0
+      var tiles    = hand.getWholeHand
+
+      var checked = ListBuffer[Tile]()
+      // Checks for same tile
+      for (a <- 0 until 13 if !(checked.contains(tiles(a)))) {
+        (tiles.filter(x => x == tiles(a))).size match {
+          case 2 => if (pairs > 0) {return 0} else {pairs += 1}
+          case it if 3 to 4 contains it => triplets += 1
+          case _ => return 0
+        }
+        checked += tiles(a)
+      }
+      println("Toitoi                2")
+      return 2
+    }
+
+    // Seven pairs
+    def chiitoitsu : Int = {
+      if(hand.isClosed) {
+        var curr = hand.getWholeHand
+        for ( a <- List(1,3,5,7,9,11,13) ) {
+          if(!(curr(a) == curr(a-1))) {
+            return 0
+          }
+        }
+        println("Chiitoitsu            2")
+        return 2
+      }
+      return 0
+    }
     //Dragon, round wind or seatwind
-    // ! TODO: Round wind not yet implemented. !
+    // ! TODO: For now the round wind is always East !
     def yakuhai : Int = {
       var y = 0
       var tiles = hand.getWholeHand
@@ -98,19 +144,47 @@ object Scoring {
         println("White Dragon          1") //Print for testng
         y += 1
       }
+      var east = 0
       if((tiles.filter(x => (x == new Tile("Wind",wind)))).size >= 3) {
         y += 1
         wind match {
-          case 1 => println("East                  1")
+          case 1 => east += 1
           case 2 => println("South                 1")
           case 3 => println("West                  1")
           case 4 => println("North                 1")
         }
       }
+      if((tiles.filter(x => (x == new Tile("Wind",1)))).size >= 3) {
+        y = east + 1
+        println("East                  " + y)
+      }
       return y
     }
 
     return yaku
+  }
+
+  // ! Disregards seven pairs and thirteen orphans !
+  def isLegitHand(hand : Hand) : Boolean = {
+    var triplets = 0
+    var pairs    = 0
+    var tiles    = hand.getWholeHand
+
+    var checked = ListBuffer[Tile]()
+    // Checks for same tile
+    for (a <- 0 until (tiles.size -1) if !(checked.contains(tiles(a)))) {
+      (tiles.filter(x => x == tiles(a))).size match {
+        case 2 => if (pairs > 0) {return false} else {pairs += 1}
+        case it if 3 to 4 contains it => triplets += 1
+        case _ => return false
+      }
+      checked += tiles(a)
+    }
+    tiles = hand.getWholeHand
+    if(triplets == 4 && pairs == 1) {
+      return true
+    }
+    return false //Undefined
   }
 
   private[this] def countFu(hand : Hand) : Int = { return 0 } //undefined
