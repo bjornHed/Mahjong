@@ -78,6 +78,7 @@ object Scoring {
     yaku += toitoi
     yaku += honroutou
     yaku += iitsu
+    yaku += honitsu
 
     def riichi : Int = {
       if(player.getRiichi) {
@@ -128,6 +129,22 @@ object Scoring {
         println("Honroutou             2")
         return 2
       }
+      return 0
+    }
+
+    // One suit mixed with honours
+    def honitsu : Int = {
+      var tiles = hand.getWholeHand
+      var allSuits = List("Dot","Bamboo","Character")
+      allSuits.map(s => if(tiles == (tiles.filter(x =>
+        x.suit == "Dragon" || x.suit == "Wind" || x.suit == s))) {
+          if(hand.isClosed) {
+            println("Honitsu               3")
+            return 3
+          }
+          println("Honitsu               2")
+          return 2
+        })
       return 0
     }
 
