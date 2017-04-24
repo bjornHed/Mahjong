@@ -4,6 +4,7 @@ import scala.collection.mutable.ListBuffer
 object Scoring {
   // DEFINITION FOR TESTING
   def main(args: Array[String]): Unit = {
+    var t0 = new Tile("Dot",1)
     var t1 = new Tile("Dot",2)
         var t2 = new Tile("Dot",3)
         var t3 = new Tile("Dot",4)
@@ -11,12 +12,15 @@ object Scoring {
         var t5 = new Tile("Dot",6)
         var t6 = new Tile("Dot",7)
         var t7 = new Tile("Dot",8)
+          var t8 = new Tile("Dot",9)
     var dragon = new Tile("Dragon",2)
     var wind = new Tile("Wind",1)
     var p = new Player
+    var iit= ListBuffer[Tile](t0,t1,t2,t3,t4,t5,t6,t7,t8,wind,wind,wind,dragon,dragon)
     var hand = ListBuffer[Tile](t1,t1,t1,t2,t2,t2,t3,t3,t3,t4,t4,t4,t5,t5)
     var sevenpairs = ListBuffer[Tile](t1,t1,t2,t2,t3,t3,t4,t4,t5,t5,t6,wind,wind,wind)
-    p.newRound(1,hand)
+    var honr = ListBuffer[Tile](dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon)
+    p.newRound(1,iit)
     println(isLegitHand(p.getHand))
     p.riichi
     println(calculateScore(p,true,ListBuffer[Tile](t3)))
@@ -72,6 +76,8 @@ object Scoring {
     yaku += yakuhai
     yaku += chiitoitsu
     yaku += toitoi
+    yaku += honroutou
+    yaku += iitsu
 
     def riichi : Int = {
       if(player.getRiichi) {
@@ -110,6 +116,43 @@ object Scoring {
       }
       println("Toitoi                2")
       return 2
+    }
+
+    // Only terminals and honours
+    def honroutou : Int = {
+      val tiles = hand.getWholeHand
+      val filterd =
+        tiles.filter(x => x.suit == "Dragon" || x.suit == "Wind"
+                        || x.value == 1 || x.value == 9)
+      if(filterd.length == tiles.length) {
+        println("Honroutou             2")
+        return 2
+      }
+      return 0
+    }
+
+    // 1 to 9 of one suit.
+    def iitsu : Int = {
+        val tiles = hand.getWholeHand
+        val allSuits = List("Dot","Bamboo","Character")
+        var result = 0
+        allSuits.foreach(su => result += helper(su))
+
+          def helper(s : String) : Int = {
+            val nmbrs = 1 to 9 toList
+            val series = (tiles.filter(x => x.suit == s)).distinct
+            val f = ListBuffer(nmbrs.map(x => new Tile(s,x))).flatten
+            if(f == series) {
+              if(hand.isClosed) {
+                println("Iitsu                 2")
+                return 2
+              }
+              println("Iitsu                 1")
+              return 1
+            }
+            return 0
+          }
+      return result
     }
 
     // Seven pairs
@@ -164,6 +207,7 @@ object Scoring {
     return yaku
   }
 
+  // TODO
   // ! Disregards seven pairs and thirteen orphans !
   def isLegitHand(hand : Hand) : Boolean = {
     var triplets = 0
