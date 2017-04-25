@@ -1,6 +1,10 @@
 import scala.language.postfixOps
 import scala.collection.mutable.ListBuffer
 
+class Context(lastTile : Boolean, lastDiscard : Boolean, deadWall : Boolean) {
+
+}
+
 object Scoring {
   // DEFINITION FOR TESTING
   def main(args: Array[String]): Unit = {
@@ -20,7 +24,7 @@ object Scoring {
     var hand = ListBuffer[Tile](t1,t1,t1,t2,t2,t2,t3,t3,t3,t4,t4,t4,t5,t5)
     var sevenpairs = ListBuffer[Tile](t1,t1,t2,t2,t3,t3,t4,t4,t5,t5,t6,wind,wind,wind)
     var honr = ListBuffer[Tile](dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon)
-    p.newRound(1,iit)
+    p.newRound(1,hand)
     println(isLegitHand(p.getHand))
     p.riichi
     println(calculateScore(p,true,ListBuffer[Tile](t3)))
@@ -90,9 +94,9 @@ object Scoring {
     // All simples
     def tanyao : Int = {
       var tiles = hand.getWholeHand
-      tiles = tiles.filter(x => (x.value != 1 && x.value != 9))
-      tiles = tiles.filter(x => (x.suit != "Dragon" && x.suit != "Wind"))
-      if(tiles.size == 14) {
+      var filTiles = tiles.filter(x => (x.value != 1 && x.value != 9))
+      filTiles = filTiles.filter(x => (x.suit != "Dragon" && x.suit != "Wind"))
+      if(tiles == filTiles) {
         println("Tanyao                1") //Print for testng
         return 1
       }
