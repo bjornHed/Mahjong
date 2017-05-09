@@ -1,6 +1,9 @@
 import scala.language.postfixOps
 import scala.collection.mutable.ListBuffer
 
+
+// Class containing the context in which the game was won. Used for counting
+// fu and some cases of yaku.
 class Context(lastTile : Boolean, lastDiscard : Boolean, deadWall : Boolean) {
 
 }
@@ -20,14 +23,16 @@ object Scoring {
     var dragon = new Tile("Dragon",2)
     var wind = new Tile("Wind",1)
     var p = new Player
+    var falseHand = ListBuffer[Tile](t0,t0,t0)
     var iit= ListBuffer[Tile](t0,t1,t2,t3,t4,t5,t6,t7,t8,wind,wind,wind,dragon,dragon)
     var hand = ListBuffer[Tile](t1,t1,t1,t2,t2,t2,t3,t3,t3,t4,t4,t4,t5,t5)
     var sevenpairs = ListBuffer[Tile](t1,t1,t2,t2,t3,t3,t4,t4,t5,t5,t6,wind,wind,wind)
     var honr = ListBuffer[Tile](dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon)
-    p.newRound(1,hand)
+    p.newRound(1,honr)
+  //  println(findShapes(t1,hand))
     println(isLegitHand(p.getHand))
     p.riichi
-    println(calculateScore(p,true,ListBuffer[Tile](t3)))
+  //  println(calculateScore(p,true,ListBuffer[Tile](t3)))
   }
   /* Returns the respective points to be added/subtracted
      in case of a draw */
@@ -104,6 +109,7 @@ object Scoring {
     }
 
     // All triplets
+    //TODO DOES NOT WORK DISREGARDS KANS
     def toitoi : Int = {
       var triplets = 0
       var pairs    = 0
@@ -228,28 +234,75 @@ object Scoring {
     return yaku
   }
 
-  // TODO
-  // ! Disregards seven pairs and thirteen orphans !
-  def isLegitHand(hand : Hand) : Boolean = {
-    var triplets = 0
-    var pairs    = 0
-    var tiles    = hand.getWholeHand
+  private[this] def findShapes(tile : Tile, h : ListBuffer[Tile]) : ListBuffer[ListBuffer[Tile]] = {
+    var result = ListBuffer[ListBuffer[Tile]]()
+    var nmbr   = (h.filter(x => x == tile)).size
+    if(nmbr >= 4) { result += ListBuffer[Tile](tile,tile,tile,tile) }
+    if(nmbr >= 3) { result += ListBuffer[Tile](tile,tile,tile) }
+    if(nmbr >= 2) { result += ListBuffer[Tile](tile,tile) }
+    if(tile.suit != "Dragon" && tile.suit != "Wind") {
+        var a = tile.value
+        if(h.contains(new Tile(tile.suit,(a-1)))
+          && h.contains(new Tile(tile.suit,(a+1)))) {
+          result += ListBuffer[Tile](tile,
+            new Tile(tile.suit,(a-1)),
+            new Tile(tile.suit,(a+1)))
+        }
+        if (h.contains(new Tile(tile.suit,(a+1)))
+          && h.contains(new Tile(tile.suit,(a+2)))) {
+            result += ListBuffer[Tile](tile,
+              new Tile(tile.suit,(a+1)),
+              new Tile(tile.suit,(a+2)))
+        }
+        if(h.contains(new Tile(tile.suit,(a-1)))
+            && h.contains(new Tile(tile.suit,(a-2)))) {
+              result += ListBuffer[Tile](tile,
+                new Tile(tile.suit,(a-1)),
+                new Tile(tile.suit,(a-2)))
+        }
+    }
+    return result
+  }
 
-    var checked = ListBuffer[Tile]()
-    // Checks for same tile
-    for (a <- 0 until (tiles.size -1) if !(checked.contains(tiles(a)))) {
-      (tiles.filter(x => x == tiles(a))).size match {
-        case 2 => if (pairs > 0) {return false} else {pairs += 1}
-        case it if 3 to 4 contains it => triplets += 1
-        case _ => return false
+  // Does not check Seven Pairs or Thriteen Orphans
+  private[this] def isLegitHand(ha : Hand) : Boolean = {
+    var ohand = ha.getOpenHand
+    var chand = ha.getClosedHand
+    var (_,shapesInClosed) = correctShapes(chand,false,0)
+    var (result,shapesInOpen) = correctShapes(ohand,false,shapesInClosed)
+    return (result && (shapesInOpen == 5))
+  }
+
+  // TODO Bug when containing many Kans.
+  private[this] def correctShapes(h : ListBuffer[Tile], pairFound : Boolean, currShapes : Int) : (Boolean,Int) = {
+    if(h.isEmpty) {
+      if(currShapes == 5) {
+        return (true,currShapes)
       }
-      checked += tiles(a)
+      return (false,currShapes)
     }
-    tiles = hand.getWholeHand
-    if(triplets == 4 && pairs == 1) {
-      return true
+
+    var shapes = findShapes(h.head,h)
+    for (i <- shapes) {
+      if(i.size == 2) {
+        if(!pairFound) {
+          var newHand = h
+          for (item <- i) {
+            newHand -= item
+          }
+          var (legit,nmbrShapes) = correctShapes(newHand,true,currShapes+1)
+          if(legit) return (true,nmbrShapes)
+        }
+      } else {
+        var newHand = h
+        for (item <- i) {
+          newHand -= item
+        }
+        var (legit,nmbrShapes) = correctShapes(newHand,pairFound,currShapes+1)
+        if(legit) return (true,nmbrShapes)
+      }
     }
-    return false //Undefined
+    return (false,currShapes)
   }
 
   private[this] def countFu(hand : Hand) : Int = { return 0 } //undefined
@@ -262,7 +315,7 @@ object Scoring {
      val h = hand.getWholeHand
      val nmbr = (h.map(x => dora.count(y => y == x)).sum)
      if(nmbr != 0) {
-       println("Dora                  " + nmbr) //Print for testing, remove later
+       println("Dora                  " + nmbr) //Print for testing
      }
      return nmbr
   }

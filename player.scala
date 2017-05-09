@@ -26,7 +26,7 @@ class Player {
 class Hand {
   // Open is the hand you can discard from, concealed from opponents.
   private var open   = ListBuffer[Tile]()
-  // Closed are locked tiles from stealing of 'Kan'. Visible to opponents.
+  // Closed are locked tiles from stealing. Visible to opponents.
   private var closed = ListBuffer[Tile]()
 
   // Checks if the hand is closed.
@@ -51,7 +51,7 @@ class Hand {
   }
 
   /* Insertionsort algorithm since the hand
-     will be small (at most a size of 14) and
+     will be small (at most a size of 18) and
      will be almost sorted in all but the
      initial case. */
   def sort = {
@@ -85,4 +85,6 @@ class Hand {
   }
 
   def getWholeHand : ListBuffer[Tile] = { return (open ++ closed) }
+  def getOpenHand : ListBuffer[Tile] = { return open }
+  def getClosedHand : ListBuffer[Tile] = { return closed }
 }
