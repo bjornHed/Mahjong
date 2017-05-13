@@ -16,6 +16,12 @@ object Scoring {
         var t2 = new Tile("Dot",3)
         var t3 = new Tile("Dot",4)
         var t4 = new Tile("Dot",5)
+        var d2 = new Tile("Bamboo",3)
+        var d3 = new Tile("Bamboo",4)
+        var d4 = new Tile("Bamboo",5)
+        var c2 = new Tile("Character",3)
+        var c3 = new Tile("Character",4)
+        var c4 = new Tile("Character",5)
         var t5 = new Tile("Dot",6)
         var t6 = new Tile("Dot",7)
         var t7 = new Tile("Dot",8)
@@ -23,16 +29,17 @@ object Scoring {
     var dragon = new Tile("Dragon",2)
     var wind = new Tile("Wind",1)
     var p = new Player
+    var dou = ListBuffer[Tile](t2,t2,t2,d2,d2,d2,c2,c2,c2,wind,wind,wind,dragon,dragon)
     var falseHand = ListBuffer[Tile](t0,t0,t0)
     var iit= ListBuffer[Tile](t0,t1,t2,t3,t4,t5,t6,t7,t8,wind,wind,wind,dragon,dragon)
     var hand = ListBuffer[Tile](t1,t1,t1,t2,t2,t2,t3,t3,t3,t4,t4,t4,t5,t5)
     var sevenpairs = ListBuffer[Tile](t1,t1,t2,t2,t3,t3,t4,t4,t5,t5,t6,wind,wind,wind)
     var honr = ListBuffer[Tile](dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon)
-    p.newRound(1,honr)
+    p.newRound(1,dou)
   //  println(findShapes(t1,hand))
-    println(isLegitHand(p.getHand))
+  //  println(allShapes(dou))
     p.riichi
-  //  println(calculateScore(p,true,ListBuffer[Tile](t3)))
+    println(calculateScore(p,true,ListBuffer[Tile](t3)))
   }
   /* Returns the respective points to be added/subtracted
      in case of a draw */
@@ -88,6 +95,9 @@ object Scoring {
     yaku += honroutou
     yaku += iitsu
     yaku += honitsu
+    yaku += chantaiyao
+    yaku += sanshoku_doukou
+    yaku += sanankou
 
     def riichi : Int = {
       if(player.getRiichi) {
@@ -196,6 +206,74 @@ object Scoring {
       }
       return 0
     }
+
+    // Three sequences have the same number across the three different suits.
+    // TODO
+    def sanshoku_doujun : Int = {
+      var tiles = hand.getWholeHand
+      tiles = tiles.filter(x => x.suit != "Dragon" || x.suit != "Wind")
+      return 0
+    }
+
+    // The hand includes three groups of triplets (or closed quads)
+    // that have been formed without calling any tiles.
+    def sanankou : Int = {
+      var tiles     = hand.getOpenHand
+      var allGroups = allShapes(tiles)
+      var triplets  = 0
+      for(group <- allGroups) {
+        var tripletGroup = group.filter(x => x.value == (group.head).value)
+        if(tripletGroup.size == group.size) triplets += 1
+      }
+      if(triplets >= 3) {
+        println("Sanankou              2")
+        return 2
+      }
+      return 0
+    }
+
+    // The hand includes three groups of triplets with the same number.
+    def sanshoku_doukou : Int = {
+      var allGroups = allShapes(hand.getWholeHand)
+      var tripletGroups = ListBuffer[Int](0)
+      for(group <- allGroups) {
+        var filGroup = group.filter(x => x.suit != "Dragon" && x.suit != "Tile")
+        var tripletGroup = filGroup.filter(x => x.value == (group.head).value)
+        if(tripletGroup.size == group.size) {
+          tripletGroups += (group.head).value
+        }
+      }
+      for(i <- 1 to 9) {
+        if((tripletGroups.filter(x => x == i)).size >= 3) {
+          println("Sanshoku doukou       2")
+          return 2
+        }
+      }
+      return 0
+    }
+
+    // All tile groups contains atleast one terminal or honor
+    def chantaiyao : Int = {
+        var tiles = hand.getWholeHand
+        var allGroups = allShapes(tiles)
+        for (group <- allGroups) {
+          var terminals = 0
+          for (tile <- group) {
+            if(tile.suit == "Dragon" || tile.suit == "Wind" ||
+                     tile.value == 9 || tile.value == 1) {
+              terminals += 1
+            }
+            if (terminals < 1) return 0
+          }
+        }
+        if(hand.isClosed) {
+          println("Chantaiyao            2")
+          return 2
+        }
+        println("Chantaiyao            1")
+        return 1
+    }
+
     //Dragon, round wind or seatwind
     // ! TODO: For now the round wind is always East !
     def yakuhai : Int = {
@@ -268,15 +346,23 @@ object Scoring {
   private[this] def isLegitHand(ha : Hand) : Boolean = {
     var ohand = ha.getOpenHand
     var chand = ha.getClosedHand
-    var (_,shapesInClosed) = correctShapes(chand,false,0)
+    var (_,shapesInClosed) = correctShapes(chand,false,ListBuffer[ListBuffer[Tile]]())
     var (result,shapesInOpen) = correctShapes(ohand,false,shapesInClosed)
-    return (result && (shapesInOpen == 5))
+    return (result && (shapesInOpen.size == 5))
+  }
+
+  // Wrapper for easier use of the correctShapes function
+  private[this] def allShapes(hand : ListBuffer[Tile]) : ListBuffer[ListBuffer[Tile]] = {
+    var (legit,result) = correctShapes(hand,false,ListBuffer[ListBuffer[Tile]]())
+    return result
   }
 
   // TODO Bug when containing many Kans.
-  private[this] def correctShapes(h : ListBuffer[Tile], pairFound : Boolean, currShapes : Int) : (Boolean,Int) = {
+  private[this] def correctShapes(h : ListBuffer[Tile], pairFound : Boolean, currShapes : ListBuffer[ListBuffer[Tile]])
+      : (Boolean, ListBuffer[ListBuffer[Tile]]) = {
+
     if(h.isEmpty) {
-      if(currShapes == 5) {
+      if(currShapes.size == 5) {
         return (true,currShapes)
       }
       return (false,currShapes)
@@ -290,15 +376,17 @@ object Scoring {
           for (item <- i) {
             newHand -= item
           }
-          var (legit,nmbrShapes) = correctShapes(newHand,true,currShapes+1)
+          var (legit,nmbrShapes) = correctShapes(newHand,true,currShapes += i)
           if(legit) return (true,nmbrShapes)
         }
       } else {
         var newHand = h
+        // Diff seemed not to be working properly, however this should have
+        // the same complexity.
         for (item <- i) {
           newHand -= item
         }
-        var (legit,nmbrShapes) = correctShapes(newHand,pairFound,currShapes+1)
+        var (legit,nmbrShapes) = correctShapes(newHand,pairFound,currShapes += i)
         if(legit) return (true,nmbrShapes)
       }
     }
