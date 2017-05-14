@@ -27,6 +27,7 @@ object Scoring {
         var t7 = new Tile("Dot",8)
           var t8 = new Tile("Dot",9)
     var dragon = new Tile("Dragon",2)
+    var drag2 = new Tile("Dragon",3)
     var wind = new Tile("Wind",1)
     var p = new Player
     var dou = ListBuffer[Tile](t2,t2,t2,d2,d2,d2,c2,c2,c2,wind,wind,wind,dragon,dragon)
@@ -36,10 +37,11 @@ object Scoring {
     var sevenpairs = ListBuffer[Tile](t1,t1,t2,t2,t3,t3,t4,t4,t5,t5,t6,wind,wind,wind)
     var honr = ListBuffer[Tile](dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon,dragon)
     p.newRound(1,dou)
+    var somDrag = ListBuffer[Tile](dragon,dragon,dragon)
   //  println(findShapes(t1,hand))
-  //  println(allShapes(dou))
-    p.riichi
-    println(calculateScore(p,true,ListBuffer[Tile](t3)))
+    println(allShapes(honr))
+  //  p.riichi
+  //  println(calculateScore(p,true,ListBuffer[Tile](t3)))
   }
   /* Returns the respective points to be added/subtracted
      in case of a draw */
@@ -97,6 +99,8 @@ object Scoring {
     yaku += honitsu
     yaku += chantaiyao
     yaku += sanshoku_doukou
+    yaku += sanshoku_doujun
+    yaku += shousangen
     yaku += sanankou
 
     def riichi : Int = {
@@ -147,6 +151,26 @@ object Scoring {
                         || x.value == 1 || x.value == 9)
       if(filterd.length == tiles.length) {
         println("Honroutou             2")
+        return 2
+      }
+      return 0
+    }
+
+    // The hand contains two sets of 3 dragon tiles
+    // and a pair of the third dragon tiles.
+    def shousangen : Int = {
+      var tiles    = hand.getWholeHand
+      var triplets = 0
+      var pair     = false
+      for(i <- 1 to 3) {
+        if((tiles.filter(x => x == new Tile("Dragon",i))).size == 3) {
+          triplets += 1
+        } else if((tiles.filter(x => x == new Tile("Dragon",i))).size == 2) {
+          pair = true
+        }
+      }
+      if(triplets == 2 && pair) {
+        println("Shousangen            2")
         return 2
       }
       return 0
@@ -208,10 +232,37 @@ object Scoring {
     }
 
     // Three sequences have the same number across the three different suits.
-    // TODO
     def sanshoku_doujun : Int = {
+      var ya = 2
+      if(!hand.isClosed) ya = 1
       var tiles = hand.getWholeHand
-      tiles = tiles.filter(x => x.suit != "Dragon" || x.suit != "Wind")
+      var allGroups = allShapes(tiles)
+      var allSuits = List("Bamboo","Character","Dot")
+      for(group <- allGroups) {
+        var first = group.head
+        var otherSuits = allSuits.filter(x => x != first.suit)
+        if((otherSuits.map(x => allGroups.contains(copyGroup(x,group))))
+              .forall(pred => pred == true)) {
+                println("Sanshoku doujun       " + ya)
+                return ya
+        }
+
+        def copyGroup(s : String, g : ListBuffer[Tile]) : ListBuffer[Tile] = {
+          var copyGroup = ListBuffer[Tile]()
+          for(i <- 0 until g.length) { copyGroup += new Tile(s,g(i).value) }
+          return copyGroup
+        }
+      }
+      return 0
+    }
+
+    // Three kans are called for this hand.
+    def sankantsu : Int = {
+      var tiles = hand.getWholeHand
+      if(tiles.size >= 15) {
+        println("Sankantsu              2")
+        return 2
+      }
       return 0
     }
 
@@ -355,6 +406,16 @@ object Scoring {
   private[this] def allShapes(hand : ListBuffer[Tile]) : ListBuffer[ListBuffer[Tile]] = {
     var (legit,result) = correctShapes(hand,false,ListBuffer[ListBuffer[Tile]]())
     return result
+  }
+
+  private[this] def isTripletShape(shape : ListBuffer[Tile]) : Boolean = {
+    var first = shape.head
+    for(i <- 1 until shape.size) {
+      if(shape(i) != first) {
+        return false
+      }
+    }
+    return true
   }
 
   // TODO Bug when containing many Kans.
