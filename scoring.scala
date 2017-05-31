@@ -39,9 +39,9 @@ object Scoring {
     p.newRound(1,dou)
     var somDrag = ListBuffer[Tile](dragon,dragon,dragon)
   //  println(findShapes(t1,hand))
-    println(allShapes(honr))
+  //  println(allShapes(dou))
   //  p.riichi
-  //  println(calculateScore(p,true,ListBuffer[Tile](t3)))
+    println(calculateScore(p,true,ListBuffer[Tile](t3)))
   }
   /* Returns the respective points to be added/subtracted
      in case of a draw */
@@ -101,6 +101,8 @@ object Scoring {
     yaku += sanshoku_doukou
     yaku += sanshoku_doujun
     yaku += shousangen
+    yaku += junchan_taiyao
+    yaku += chinitsu
     yaku += sanankou
 
     def riichi : Int = {
@@ -110,6 +112,7 @@ object Scoring {
       }
       return 0
     }
+
     // All simples
     def tanyao : Int = {
       var tiles = hand.getWholeHand
@@ -123,21 +126,13 @@ object Scoring {
     }
 
     // All triplets
-    //TODO DOES NOT WORK DISREGARDS KANS
     def toitoi : Int = {
-      var triplets = 0
-      var pairs    = 0
-      var tiles    = hand.getWholeHand
-
-      var checked = ListBuffer[Tile]()
-      // Checks for same tile
-      for (a <- 0 until 13 if !(checked.contains(tiles(a)))) {
-        (tiles.filter(x => x == tiles(a))).size match {
-          case 2 => if (pairs > 0) {return 0} else {pairs += 1}
-          case it if 3 to 4 contains it => triplets += 1
-          case _ => return 0
+      var shapes   = allShapes(hand.getWholeHand)
+      for(shape <- shapes) {
+        var first = shape.head
+        for(tile <- shape) {
+          if(tile != first) return 0
         }
-        checked += tiles(a)
       }
       println("Toitoi                2")
       return 2
@@ -154,6 +149,38 @@ object Scoring {
         return 2
       }
       return 0
+    }
+
+    // All sets contain at least one terminal.
+    def junchan_taiyao : Int = {
+      val shapes = allShapes(hand.getWholeHand)
+      println(shapes)
+      for(shape <- shapes) {
+        var containsTerminal = false
+        for(tile <- shape) {
+          if (tile.value == 9 || tile.value == 1) containsTerminal = true
+        }
+        if(!containsTerminal) return 0
+      }
+      var ya = 3
+      if(!hand.isClosed) ya = 2
+      println("Junchan Taiyao        " + ya)
+      return ya
+    }
+
+    /* This hand is composed entirely of tiles
+       from only one of the three suits. It is the only yaku set at 6 han,
+       where the number drops to 5 han when opened. */
+    def chinitsu : Int = {
+      var tiles = hand.getWholeHand
+      var fsuit = (tiles.head).suit
+      for(tile <- tiles) {
+        if(tile.suit != fsuit) return 0
+      }
+      var ya = 6
+      if(!hand.isClosed) ya = 5
+      println("Chinitsu              " + ya)
+      return ya
     }
 
     // The hand contains two sets of 3 dragon tiles
@@ -325,6 +352,24 @@ object Scoring {
         return 1
     }
 
+    // A hand consisting of the tiles 1112345678999 in the same suit
+    // plus any one extra tile of the same suit.
+    def chuuren_poutou : Int = {
+      var tiles = hand.getWholeHand
+      if(!hand.isClosed) return 0
+      val fSuit = (tiles.head).suit
+      val sequence = List(1,1,1,2,3,4,5,6,7,8,9,9,9).map(x => new Tile(fSuit,x))
+      var length = 0
+      for(v <- sequence) {
+        length = tiles.length
+        tiles = tiles - v
+        if(tiles.length == length) return 0
+      }
+      if((tiles.head).suit != fSuit) return 0
+      println("Chuuren Poutou        1")
+      return 13
+    }
+
     //Dragon, round wind or seatwind
     // ! TODO: For now the round wind is always East !
     def yakuhai : Int = {
@@ -447,6 +492,7 @@ object Scoring {
         for (item <- i) {
           newHand -= item
         }
+
         var (legit,nmbrShapes) = correctShapes(newHand,pairFound,currShapes += i)
         if(legit) return (true,nmbrShapes)
       }
